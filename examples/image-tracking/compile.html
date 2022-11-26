@@ -7,8 +7,10 @@
     <script>
       Dropzone.autoDiscover = false;
 
+      // 編譯對象
       const compiler = new MINDAR.IMAGE.Compiler();
 
+      // 下載文件
       const download = (buffer) => {
         var blob = new Blob([buffer]);
         var aLink = window.document.createElement('a');
@@ -18,16 +20,19 @@
         window.URL.revokeObjectURL(aLink.href);
       }
 
+      // 圖片編譯的數據
       const showData = (data) => {
         console.log("data", data);
+        // 一張圖片識別為多張帶點的圖片
+        // 跟踪图像列表
         for (let i = 0; i < data.trackingImageList.length; i++) {
-          const image = data.trackingImageList[i];
-	  const points = data.trackingData[i].points.map((p) => {
-	    return {x: Math.round(p.x), y: Math.round(p.y)};
-	  });
-          showImage(image, points);
+            const image = data.trackingImageList[i];
+            const points = data.trackingData[i].points.map((p) => {
+              return {x: Math.round(p.x), y: Math.round(p.y)};
+            });
+              showImage(image, points);
         }
-
+        // 图像列表
         for (let i = 0; i < data.imageList.length; i++) {
           const image = data.imageList[i];
           const kpmPoints = [...data.matchingData[i].maximaPoints, ...data.matchingData[i].minimaPoints];
@@ -39,7 +44,7 @@
         }
       }
 
-
+      // 顯示圖片在頁面上
       const showImage = (targetImage, points) => {
         const container = document.getElementById("container");
         const canvas = document.createElement('canvas');
@@ -58,7 +63,8 @@
             data[r * canvas.width + c] = alpha | (pix << 16) | (pix << 8) | pix;
           }
         }
-
+        
+        // 把1个字节的内容，复制到一个4字节的双字中
         var pix = (0xff << 24) | (0x00 << 16) | (0xff << 8) | 0x00; // green
         for (let i=0; i < points.length; ++i) {
           const x = points[i].x;
@@ -73,6 +79,7 @@
             data[offset+size*canvas.width] = pix;
           }
         }
+        // 将背景图的数据信息填充到canvas
         ctx.putImageData(imageData, 0, 0);
       }
 
@@ -88,28 +95,36 @@
         })
       }
 
+      // 上傳圖片處理
       const compileFiles = async (files) => {
+        //  多張圖片
         const images = [];
         for (let i = 0; i < files.length; i++) {
           images.push(await loadImage(files[i]));
         }
         let _start = new Date().getTime();
-	const dataList = await compiler.compileImageTargets(images, (progress) => {
-	  document.getElementById("progress").innerHTML = 'progress: ' + progress.toFixed(2) + "%";
-	});
-        console.log('exec time compile: ', new Date().getTime() - _start);
-        for (let i = 0; i < dataList.length; i++) {
+        // 所有圖片處理，進度條
+        const dataList = await compiler.compileImageTargets(images, (progress) => {
+            document.getElementById("progress").innerHTML = 'progress: ' + progress.toFixed(2) + "%";
+          });
+        // 處理所用時間
+          console.log('exec time compile: ', new Date().getTime() - _start);
+          for (let i = 0; i < dataList.length; i++) {
           showData(dataList[i]);
         }
+        // 編譯數據
         const exportedBuffer = await compiler.exportData();
+        //  下載事件
         document.getElementById("downloadButton").addEventListener("click", function() {
           download(exportedBuffer);
         });
       }
 
+      // 上傳的是mind文件編譯，直接轉變為圖片數據
       const loadMindFile = async (file) => {
         var reader = new FileReader();
         reader.onload = function() {
+          // 文件編譯數據
           const dataList = compiler.importData(this.result);
           for (let i = 0; i < dataList.length; i++) {
             showData(dataList[i]);
@@ -126,9 +141,11 @@
           const files = myDropzone.files;
           if (files.length === 0) return;
           const ext = files[0].name.split('.').pop();
+          // mind 文件處理
           if (ext === 'mind') {
             loadMindFile(files[0]); 
           } else {
+          // 圖片處理
             compileFiles(files);
           }
         });
